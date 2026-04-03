@@ -1,9 +1,8 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from typing import Optional
+from fastapi import APIRouter, HTTPException, UploadFile, File
 
-from models import ClassifyRequest, SentimentResult
+from models import ClassifyRequest
 from services.data_processor import parse_csv, parse_paste
 from services.sentiment import classify_batch
 
@@ -23,7 +22,7 @@ async def classify(request: ClassifyRequest):
         raise HTTPException(status_code=422, detail="text array cannot be empty")
 
     try:
-        results = classify_batch(request.text)
+        results = await classify_batch(request.text)
     except Exception as e:
         logger.error(f"Classification error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -54,7 +53,7 @@ async def classify_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail="CSV contained no valid feedback rows")
 
     try:
-        results = classify_batch(texts)
+        results = await classify_batch(texts)
     except Exception as e:
         logger.error(f"Classification error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -65,7 +64,7 @@ async def classify_csv(file: UploadFile = File(...)):
 @router.post("/api/classify/paste", response_model=dict)
 async def classify_paste(request: ClassifyRequest):
     """
-    Accept a single raw text string (pasted), parse it into items, and classify.
+    Accept pasted text, parse it into items, and classify.
 
     Request: { "text": ["<raw pasted text>"] }  (single-element array)
     Response: { "results": [{ text, label, score }, ...] }
@@ -84,7 +83,7 @@ async def classify_paste(request: ClassifyRequest):
         raise HTTPException(status_code=422, detail="No valid feedback items detected")
 
     try:
-        results = classify_batch(texts)
+        results = await classify_batch(texts)
     except Exception as e:
         logger.error(f"Classification error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.classify import router as classify_router
 from routes.export import router as export_router
 from routes.ws import router as ws_router
-from services.sentiment import load_model
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,12 +18,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: load model + init session store
-    load_model()
     app.state.session_results = []
     logger.info("App started, session initialized")
     yield
-    # Shutdown
     logger.info("App shutting down")
 
 
