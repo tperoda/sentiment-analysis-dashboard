@@ -2,7 +2,7 @@
 
 Real-time customer feedback sentiment classification with quarterly trend forecasting. Upload a CSV or paste raw text — the dashboard classifies each item as Positive, Negative, or Neutral and projects the sentiment trend 12 weeks forward.
 
-**Live Demo:** [Coming soon]  
+**Live Demo:** https://sentiment-analysis-dashboard-dyr0.onrender.com  
 **Loom Walkthrough:** [Coming soon]
 
 ---
@@ -11,7 +11,7 @@ Real-time customer feedback sentiment classification with quarterly trend foreca
 
 - **CSV upload** — drop in any CSV with a `text`, `feedback`, `content`, or `message` column
 - **Copy/paste input** — newline-separated, comma-separated, or single entries; auto-detected
-- **Real-time classification** — DistilBERT runs locally, no API costs
+- **Real-time classification** — DistilBERT via HuggingFace Inference API
 - **Live dashboard** — donut chart + stat cards update via WebSocket on every submission
 - **Trend chart** — rolling % positive sentiment plotted as a line chart
 - **Quarterly forecast** — 12-week linear regression projection with 95% confidence interval
@@ -23,10 +23,10 @@ Real-time customer feedback sentiment classification with quarterly trend foreca
 
 | Layer | Technology |
 |-------|-----------|
-| ML Model | `distilbert-base-uncased-finetuned-sst-2-english` (Hugging Face, runs locally) |
-| Backend | Python 3.11, FastAPI, WebSockets |
+| ML Model | `distilbert-base-uncased-finetuned-sst-2-english` (HuggingFace Inference API) |
+| Backend | Python 3.11, FastAPI, WebSockets, httpx |
 | Forecasting | scikit-learn LinearRegression, NumPy |
-| Data Processing | Pandas, NLTK |
+| Data Processing | Pandas |
 | Frontend | React 18, TypeScript, Vite |
 | Charts | Recharts |
 | Styling | Tailwind CSS |
@@ -39,8 +39,9 @@ Real-time customer feedback sentiment classification with quarterly trend foreca
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.11
 - Node.js 18+
+- A free [HuggingFace API token](https://huggingface.co/settings/tokens)
 
 ### Backend
 
@@ -55,10 +56,11 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 cp .env.example .env
+# Add your HF_API_TOKEN to .env
 python run.py
 ```
 
-The API will be available at `http://localhost:8000`. On first run, the DistilBERT model (~250MB) downloads automatically and is cached locally.
+The API will be available at `http://localhost:8000`.
 
 ### Frontend
 
@@ -134,7 +136,7 @@ Returns `{ "status": "ok" }`. Used by Render for health checks.
 
 ## Sentiment Classification Logic
 
-The model (`distilbert-base-uncased-finetuned-sst-2-english`) is a binary SST-2 classifier that outputs POSITIVE or NEGATIVE with a confidence score. NEUTRAL is derived from the score:
+The model (`distilbert-base-uncased-finetuned-sst-2-english`) is a binary SST-2 classifier that outputs POSITIVE or NEGATIVE with a confidence score, hosted via the HuggingFace Inference API. NEUTRAL is derived from the score:
 
 | Score Range | Label |
 |-------------|-------|
@@ -162,11 +164,16 @@ Requires a minimum of 3 data points. Returns `null` if insufficient data.
 
 1. Push to GitHub
 2. Go to [Render.com](https://render.com) → New → Web Service → connect your repo
-3. Set root directory: `backend`
-4. Build command: `pip install -r requirements.txt`
-5. Start command: `uvicorn main:app --host 0.0.0.0 --port 8000`
-6. Add environment variable: `FRONTEND_ORIGIN=https://your-vercel-url.vercel.app`
-7. Deploy
+3. Configure:
+   - **Root Directory:** `backend`
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port 8000`
+4. Add environment variables:
+   - `PYTHON_VERSION` = `3.11.9`
+   - `HF_API_TOKEN` = your HuggingFace API token
+   - `FRONTEND_ORIGIN` = your Vercel URL (add after frontend is deployed)
+5. Deploy
 
 > **Note:** Free tier spins down after 15 minutes of inactivity. First request after idle takes ~30 seconds to wake up.
 
@@ -174,10 +181,10 @@ Requires a minimum of 3 data points. Returns `null` if insufficient data.
 
 1. Push to GitHub
 2. Go to [Vercel.com](https://vercel.com) → Import → select your repo
-3. Set root directory: `frontend`
+3. Set **Root Directory** to `frontend`
 4. Add environment variables:
-   - `VITE_API_URL=https://your-render-service.onrender.com`
-   - `VITE_WS_URL=wss://your-render-service.onrender.com`
+   - `VITE_API_URL` = `https://your-render-service.onrender.com`
+   - `VITE_WS_URL` = `wss://your-render-service.onrender.com`
 5. Deploy
 
 **Total cost: $0**
@@ -194,8 +201,9 @@ sentiment-analysis-dashboard/
 │   ├── run.py                   # Uvicorn entry point
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── runtime.txt              # Pins Python to 3.11.9 for Render
 │   ├── services/
-│   │   ├── sentiment.py         # DistilBERT classification + NEUTRAL threshold
+│   │   ├── sentiment.py         # HF Inference API classification + NEUTRAL threshold
 │   │   ├── data_processor.py    # CSV + paste parsing, sanitization
 │   │   └── forecast.py          # Linear regression forecasting
 │   └── routes/
@@ -206,6 +214,7 @@ sentiment-analysis-dashboard/
 ├── frontend/
 │   └── src/
 │       ├── types.ts             # Shared TypeScript types
+│       ├── vite-env.d.ts        # Vite client type declarations
 │       ├── App.tsx              # Root layout + WebSocket wiring
 │       ├── context/
 │       │   └── SentimentContext.tsx  # Global state (results, stats, forecast)
@@ -225,11 +234,12 @@ sentiment-analysis-dashboard/
 
 ## Key Design Decisions
 
-- **Local inference over API** — DistilBERT runs on the server, no OpenAI/Anthropic API costs or rate limits
+- **HuggingFace Inference API over local inference** — DistilBERT running locally via PyTorch exceeded Render's free tier 512MB RAM limit; the HF Inference API provides the same model with zero memory overhead at no cost
 - **NEUTRAL via threshold** — SST-2 is binary; scores in [0.40, 0.60] are treated as neutral rather than switching to a heavier 3-class model
 - **Persistent WebSocket** — connection opens on page load and auto-reconnects with exponential backoff; enables real-time progress updates mid-classification and handles Render's 15-minute idle spin-down
 - **Session-only storage** — no database; all state lives in backend memory + React context; session clears on refresh or 1 hour of inactivity
 - **Linear regression forecast** — simple, interpretable, and sufficient for trend projection on small datasets typical of a session
+- **Python 3.11 pinned** — Render defaults to Python 3.14 which lacks pre-built wheels for pydantic-core; pinned via `PYTHON_VERSION=3.11.9` env variable
 
 ---
 
