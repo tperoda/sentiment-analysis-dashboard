@@ -75,7 +75,7 @@ export function ResultsTable() {
             <tr>
               <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium w-[55%]">Text</th>
               <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Sentiment</th>
-              <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Score</th>
+              <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Confidence Score</th>
               <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Time</th>
             </tr>
           </thead>

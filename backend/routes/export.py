@@ -22,7 +22,7 @@ async def export_csv(request: Request):
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["text", "sentiment", "score", "timestamp"])
+    writer.writerow(["text", "sentiment", "confidence_score", "timestamp"])
 
     for item in session_results:
         writer.writerow([

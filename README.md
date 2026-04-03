@@ -15,7 +15,7 @@ Real-time customer feedback sentiment classification with quarterly trend foreca
 - **Live dashboard** — donut chart + stat cards update via WebSocket on every submission
 - **Trend chart** — rolling % positive sentiment plotted as a line chart
 - **Quarterly forecast** — 12-week linear regression projection with 95% confidence interval
-- **Export** — download all results as CSV with text, sentiment, score, and timestamp
+- **Export** — download all results as CSV with text, sentiment, confidence score, and timestamp
 
 ---
 
