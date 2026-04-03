@@ -1,5 +1,4 @@
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -10,6 +9,7 @@ import {
   Area,
   ComposedChart,
 } from 'recharts'
+import type { ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { useSentiment } from '../context/SentimentContext'
 
 /**
@@ -58,13 +58,13 @@ export function SentimentChart() {
         <XAxis dataKey="idx" tick={{ fontSize: 11 }} label={{ value: 'Entry', position: 'insideBottomRight', offset: -8, fontSize: 11 }} />
         <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
         <Tooltip
-          formatter={(value: number | null, name: string) => {
-            if (value === null) return ['-', name]
+          formatter={(value: ValueType, name: string) => {
+            if (value === null || value === undefined) return ['-', name]
             const labels: Record<string, string> = {
               history: '% Positive (historical)',
               forecast: '% Positive (forecast)',
             }
-            return [`${value.toFixed(1)}%`, labels[name] ?? name]
+            return [`${(value as number).toFixed(1)}%`, labels[name] ?? name]
           }}
         />
         {/* Confidence interval band */}
